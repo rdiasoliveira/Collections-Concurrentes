@@ -43,11 +43,4 @@ public class Bogus {
         thread.join();
     }
 
-    public class Counter {
-        private int counter;
-
-        public int nextInt() {
-            return counter++;
-        }
-    }
 }
