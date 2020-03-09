@@ -19,11 +19,8 @@ import java.util.concurrent.atomic.AtomicReference;
  * AtomicReference et sa méthode compareAndSet.
  *
  * Expliquer pourquoi utiliser la classe AtomicReference n'est pas super efficace ?
- * R:
+ * R: AtomicReference n'est pas super efficace car il y a une indirection en plus pour acceder à E.
  *
- * Pour les plus balèzes, créer une classe Linked2 thread-safe (et lock-free) utilisant la classe VarHandle au lieu de
- * la classe AtomicReference.
- * Rappel: les types paramétrés sont érasés à l'exécution !
  */
 
 public class Linked<E> {
@@ -57,6 +54,28 @@ public class Linked<E> {
             size++;
         }
         return size;
+    }
+
+    public static void main(String [] args) throws InterruptedException {
+        Thread threads [] = new Thread[2];
+        var list = new Linked<Integer>();
+        for(int i = 0; i < threads.length; i++) {
+            threads[i] = new Thread(() -> {
+                for(int j = 0; j < 100; j++){
+                    list.addFirst(j);
+                }
+            });
+        }
+
+        for(int i = 0; i < threads.length; i++) {
+            threads[i].start();
+        }
+
+        for(int i = 0; i < threads.length; i++) {
+            threads[i].join();
+        }
+
+        System.out.println(list.size());
     }
 
 }
