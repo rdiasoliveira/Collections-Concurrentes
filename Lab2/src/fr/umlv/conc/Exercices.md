@@ -98,3 +98,12 @@ public class Person4 {
 ```
 Le code suivant n'a pas de problème de publication car nous sommes en train d'utiliser les valeurs en paramètre
 dans le constructeur.
+
+# Exercice 2
+
+> Recopier le code de la classe StringList dans une classe LockFreeStringList qui va implanter une liste thread-safe sans verrou.
+  Dans un premier temps, implanter la méthode addLast. Pour cela vous utiliserez la classe VarHandle.
+  Comment doit-on modifier le code de size pour que la méthode soit thread-safe ?
+
+Pour que le code de size soit thread-safe nous devons mettre le champs next de Entry tant que volatile. Cela permettra
+de lire en mémoire la vrai valeur de next et pas la valeur en cache.

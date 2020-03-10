@@ -1,17 +1,23 @@
-package fr.upem;
+package fr.umlv.conc;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class StringList {
+
     static final class Entry {
-        final String element;
-        Entry next;
+        private final String element;
+        private volatile Entry next;
 
         Entry(String element) {
             this.element = element;
@@ -19,20 +25,34 @@ public class StringList {
     }
 
     private final Entry head;
-    // private Entry tail;
+    private volatile Entry tail;
+    private static final VarHandle NEXT_HANDLE;
+
+    static {
+        var lookup = MethodHandles.lookup();
+        try {
+            NEXT_HANDLE = lookup.findVarHandle(Entry.class, "next", Entry.class);
+        } catch(NoSuchFieldException | IllegalAccessException e){
+            throw new AssertionError(e);
+        }
+    }
 
     public StringList() {
-        /* tail = */ head = new Entry(null); // fake first entry
+        tail = head = new Entry(null); // fake first entry
     }
 
     public void addLast(String element) {
+        Objects.requireNonNull(element);
         var entry = new Entry(element);
         var last = head;
         for (;;) {
             var next = last.next;
             if (next == null) {
-                last.next = entry;
-                return;
+                //last.next = entry;
+                if(NEXT_HANDLE.compareAndSet(last, null, entry)) {
+                    return;
+                }
+                next = last.next;
             }
             last = next;
         }
@@ -69,5 +89,4 @@ public class StringList {
         }
         System.out.println(list.size());
     }
-
 }
