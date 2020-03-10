@@ -26,12 +26,13 @@ public class StringList {
 
     private final Entry head;
     private volatile Entry tail;
-    private static final VarHandle NEXT_HANDLE;
+    private static final VarHandle NEXT_HANDLE, TAIL_HANDLE;
 
     static {
         var lookup = MethodHandles.lookup();
         try {
             NEXT_HANDLE = lookup.findVarHandle(Entry.class, "next", Entry.class);
+            TAIL_HANDLE = lookup.findVarHandle(StringList.class, "tail", Entry.class);
         } catch(NoSuchFieldException | IllegalAccessException e){
             throw new AssertionError(e);
         }
@@ -44,15 +45,20 @@ public class StringList {
     public void addLast(String element) {
         Objects.requireNonNull(element);
         var entry = new Entry(element);
-        var last = head;
+        //var last = head;
+        var oldTail = tail;
+        var last = oldTail;
         for (;;) {
             var next = last.next;
             if (next == null) {
                 //last.next = entry;
                 if(NEXT_HANDLE.compareAndSet(last, null, entry)) {
+                    TAIL_HANDLE.compareAndSet(this, oldTail, entry);
+                    tail = entry;
                     return;
                 }
-                next = last.next;
+                //next = last.next;
+                next = tail;
             }
             last = next;
         }
