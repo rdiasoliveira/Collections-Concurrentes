@@ -1,5 +1,7 @@
 package fr.umlv.conc;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.function.Consumer;
@@ -7,8 +9,10 @@ import java.util.function.Consumer;
 public class COWSet<E> {
     private final E[][] hashArray;
 
-    // VAR HANDLE OF EACH TABLE CASE VOLATILE
-    // ECRITURE VALEUR COMPARE AND SET
+    private static final VarHandle HASH_ARRAY_HANDLE;
+    static {
+        HASH_ARRAY_HANDLE = MethodHandles.arrayElementVarHandle(Object[][].class);
+    }
 
     private static final Object[] EMPTY = new Object[0];
 
@@ -22,24 +26,36 @@ public class COWSet<E> {
     public boolean add(E element) {
         Objects.requireNonNull(element);
         var index = element.hashCode() % hashArray.length;
-        for (var e : hashArray[index]) {
-            if (element.equals(e)) {
-                return false;
+
+        for(;;) {
+            @SuppressWarnings("unchecked")
+            var array = (E[]) HASH_ARRAY_HANDLE.getVolatile(hashArray, index);
+
+            for (var e : array) {
+                if (element.equals(e)) {
+                    return false;
+                }
+            }
+
+            var newArray = Arrays.copyOf(array, array.length + 1);
+            newArray[array.length] = element;
+            if(HASH_ARRAY_HANDLE.compareAndSet(hashArray, index, array, newArray)) {
+                hashArray[index] = newArray;
+                return true;
             }
         }
-        var oldArray = hashArray[index];
-        var newArray = Arrays.copyOf(oldArray, oldArray.length + 1);
-        newArray[oldArray.length] = element;
-        hashArray[index] = newArray;
-        return true;
     }
 
     public void forEach(Consumer<? super E> consumer) {
+
         for(var index = 0; index < hashArray.length; index++) {
-            var oldArray = hashArray[index];
-            for(var element: oldArray) {
+
+            @SuppressWarnings("unchecked")
+            var array = (E[])HASH_ARRAY_HANDLE.getVolatile(hashArray, index);
+            for(var element: array) {
                 consumer.accept(element);
             }
+
         }
     }
 }
