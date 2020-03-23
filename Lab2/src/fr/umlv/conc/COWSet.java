@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 public class COWSet<E> {
+
     private final E[][] hashArray;
 
     private static final VarHandle HASH_ARRAY_HANDLE;
@@ -58,4 +59,39 @@ public class COWSet<E> {
 
         }
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder("");
+        for(int i = 0; i < hashArray.length; i++) {
+            sb.append(i);
+            sb.append(" ->");
+            for (int j = 0; j < hashArray[i].length; j++) {
+                sb.append(" ");
+                sb.append(hashArray[i][j].toString());
+                sb.append(";");
+            }
+            sb.append("\n\n");
+        }
+        return sb.toString();
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+
+        COWSet<Integer> cs = new COWSet<>(200);
+        Thread[] threads = new Thread[2];
+        for(int i = 0; i < threads.length; i++) {
+            threads[i] = new Thread(() -> {
+                for(int j = 0; j < 200000; j++)
+                    cs.add(j);
+            });
+            threads[i].start();
+        }
+
+        for(var thread : threads)
+            thread.join();
+
+        System.out.println(cs);
+    }
+
 }
